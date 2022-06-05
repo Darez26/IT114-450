@@ -19,6 +19,13 @@ public class Problem1
         System.out.println("Processing Array:" + Arrays.toString(arr));
         System.out.println("Odds output:");
         //TODO add/edit code here
+
+        // UCID: 31485020
+        // June 4, 2022
+        // in order to solve this problem I will first loop trough the array 
+        // each value will then be divided by 2, and if there is a remainder then the value is odd
+        // if there is not remainder then the value is even. 
+        
         int i;
         for(i =0; i <arr.length; i++)
         {

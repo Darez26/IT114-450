@@ -21,6 +21,12 @@ public class Problem2 {
         double total = 0;
         String totalOutput = "";
         //TODO add/edit code here
+        // UCID: 31485020
+        // June 4, 2022
+        // in order to solve this problem I will create a variable that will keep track of the the total
+        // then I will loop trough the array and add each value to the total. 
+        // In order to make sure that the total has 2 decimal places I will need to keep use the math library and round the 
+        // number.
 
         for (int i=0; i < arr.length;i++)
         {
