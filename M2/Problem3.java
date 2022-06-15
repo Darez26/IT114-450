@@ -88,7 +88,7 @@ public class Problem3 {
 
         StringBuilder sb = new StringBuilder();
         for(Object i : output){
-            if(sb.length() > 0){
+            if(sb.length() > 0)
                 sb.append(",");
             }
             sb.append(String.format("%s (%s)", i, i.getClass().getSimpleName().substring(0,1)));
