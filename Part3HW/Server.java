@@ -98,6 +98,12 @@ public class Server {
         }
         return false;
     }
+    //UCID: 31485020    
+    //Date  June 20, 2022
+    // Logic:  For this function of CoinToss, I created a function that would create a random integer from 0-10; The intial state of the coin is heads however 
+    // if the random integer were to change to an odd number than the message would be that the coin is tails. The message will then get returned and passed into
+    // the broadcast function. this would then allow the user to see the state of the coin after each flip command.
+
 
     private String CoinToss() {
         Random random = new Random();
@@ -112,6 +118,13 @@ public class Server {
         }
     }
 
+    //UCID: 31485020
+    //Date: June 20, 2022
+    // Logic: The logic for the shuffler message revolves with taking in a string parameter, and storing the string into a charater array.
+    // this will make it easier to loop over and change the places of each letter within the string. The logic for shuffling the word around 
+    // revolves around switching the last letter of the word with the first letter up until the for loop reaches the middle letter of the word. 
+    // when the middle is reached then the loop will break and the character array will be returned as a string  and broadcasted above.
+    
     private String shuffler(String message) {
 
         char[] mesgToChar = message.toCharArray();
