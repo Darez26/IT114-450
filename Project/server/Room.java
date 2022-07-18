@@ -179,7 +179,11 @@ public class Room implements AutoCloseable {
 			return;
 		}
 		info("Sending message to " + clients.size() + " clients");
-		//message = formatMessage(message);
+		if(message.contains("\\*"))
+		{
+			message = formatMessage(message);
+		}
+		
 		if (sender != null && processCommands(message, sender)) {
 			// it was a command, don't broadcast
 			return;
@@ -291,22 +295,26 @@ public class Room implements AutoCloseable {
 		
 
 	}
-	/* 
+	
 	// Declaring ANSI_RESET so that we can reset the color
     public static final String ANSI_RESET = "\u001B[0m";
+	public static final String ANSI_YELLOW = "\u001B[33m";
+	public static final String ANSI_RED = "\u001B[31m";
   
     // Declaring the color
     // Custom declaration
-    public static final String ANSI_YELLOW = "\u001B[33m";
+	/* 
+    
 	private String formatMessage(String msg)
 	{
 		return(ANSI_YELLOW+msg+ANSI_RESET);
 	}
+	*/
 
 	 
 	private String formatMessage(String msg)
 	{
-		String parts[] = msg.split("*");
+		String parts[] = msg.split("\\*");
 		String newmsg [] = new String [parts.length];
 		
 		for(int i=0;i<newmsg.length;i++)
@@ -320,10 +328,21 @@ public class Room implements AutoCloseable {
 				char symbol = parts[i].charAt(0);
 				switch(symbol)
 				{
+					case('Y'):
+						String y = ANSI_YELLOW +parts[i].substring(0,parts[i].length()-1)+ANSI_RESET;
+						newmsg[i]=(y);
+						break;
+					case('R'):
+					String r = ANSI_RED +parts[i].substring(0,parts[i].length()-1)+ANSI_RESET;
+					newmsg[i]=(r);
+						break;
 					case('B'):
-						String [] g = parts[i].split('B');
-
-						
+						String bold = ("\033[0;1m" + parts[i]);
+						break;
+					
+					case('I'):
+						String italics = ("\033[0m"+ parts[i]);
+						break;
 
 				}
 				
@@ -333,7 +352,8 @@ public class Room implements AutoCloseable {
 		
 		return msg;
 	}
-	*/
+	
+	
 	public void close() {
 		Server.INSTANCE.removeRoom(this);
 		isRunning = false;
