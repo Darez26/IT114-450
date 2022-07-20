@@ -8,6 +8,7 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
@@ -26,6 +27,11 @@ public class Room implements AutoCloseable {
 	private final static String FLIP = "flip";
 	private final static String ROLL = "roll";
 	private static Logger logger = Logger.getLogger(Room.class.getName());
+
+	// Declaring ANSI_RESET so that we can reset the color
+    public static final String ANSI_RESET = "\u001B[0m";
+	public static final String ANSI_YELLOW = "\u001B[33m";
+	public static final String ANSI_RED = "\u001B[31m";
 
 	public Room(String name) {
 		this.name = name;
@@ -91,8 +97,10 @@ public class Room implements AutoCloseable {
 	 * @param client  The sender of the message (since they'll be the ones
 	 *                triggering the actions)
 	 */
-	private boolean processCommands(String message, ServerThread client) {
+	private String processCommands(String message, ServerThread client) {
 		boolean wasCommand = false;
+		String response =null;
+		
 		try {
 			if (message.startsWith(COMMAND_TRIGGER)) {
 				String[] comm = message.split(COMMAND_TRIGGER);
@@ -129,13 +137,130 @@ public class Room implements AutoCloseable {
 						break;
 				}
 			}
+
+			else{
+				String msg = formatMessage(message);
+				response = msg;
+
+			}
+			
+				
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
-		return wasCommand;
+
+		//return wasCommand;
+		return response;
+
 	}
 
 	// Command helper methods
+
+	protected synchronized String formatMessage(String message)
+	{
+		String newMSG = message;
+		
+                if (newMSG.indexOf("@@") > -1) {
+                    String[] s1 = newMSG.split("@@");
+                    String m = "";
+                   
+                    for (int i = 0; i < s1.length; i++) {
+                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
+                            m += s1[i];
+                        }
+                        else {
+                            m += "<b>" + s1[i] + "</b>";
+                        }
+                        System.out.println(s1[i]);
+                    }
+        
+                    newMSG = m;
+                }
+				if(newMSG.indexOf("**") > -1)
+				{
+					String[] s1 = newMSG.split("\\*\\*");
+                    String m = "";
+                   
+                    for (int i = 0; i < s1.length; i++) {
+                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
+                            m += s1[i];
+                        }
+                        else {
+                            m += "<u>" + s1[i] + "</u>";
+                        }
+                        System.out.println(s1[i]);
+                    }
+        
+                    newMSG = m;
+
+				}
+				if(newMSG.indexOf("$$") > -1)
+				{
+					String[] s1 = newMSG.split("\\$\\$");
+                    String m = "";
+                   
+                    for (int i = 0; i < s1.length; i++) {
+                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
+                            m += s1[i];
+                        }
+                        else {
+                            m += "<i>" + s1[i] + "</i>";
+                        }
+                        System.out.println(s1[i]);
+                    }
+        
+                    newMSG = m;
+
+				}
+				
+				// color for red 
+
+				if(newMSG.indexOf("-r") > -1)
+				{
+					String[] s1 = newMSG.split("\\-");
+                    String m = "";
+                   
+                    for (int i = 0; i < s1.length; i++) {
+                        if (s1[i].startsWith("r")|| s1[i].endsWith("r")) 
+						{
+                            m += ANSI_RED + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
+                        }
+                        else {
+							m += s1[i];
+                            
+                        }
+                        System.out.println(s1[i]);
+                    }
+        
+                    newMSG = m;
+
+				}
+				if(newMSG.indexOf("-y") > -1)
+				{
+					String[] s1 = newMSG.split("\\-");
+                    String m = "";
+                   
+                    for (int i = 0; i < s1.length; i++) {
+                        if (s1[i].startsWith("y")|| s1[i].endsWith("y")) 
+						{
+                            m += ANSI_YELLOW + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
+                        }
+                        else {
+							m += s1[i];
+                            
+                        }
+                        System.out.println(s1[i]);
+                    }
+        
+                    newMSG = m;
+
+				}
+
+        
+		return newMSG;
+    }
+
+		
 
 	protected static void getRooms(String query, ServerThread client) {
 		String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
@@ -179,15 +304,15 @@ public class Room implements AutoCloseable {
 			return;
 		}
 		info("Sending message to " + clients.size() + " clients");
-		if(message.contains("\\*"))
-		{
-			message = formatMessage(message);
-		}
 		
-		if (sender != null && processCommands(message, sender)) {
+		
+		String resp = processCommands(message, sender);
+
+		if (resp==null) {
 			// it was a command, don't broadcast
 			return;
 		}
+		message = resp;
 		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
 		synchronized (clients) {
 			Iterator<ServerThread> iter = clients.iterator();
@@ -296,62 +421,7 @@ public class Room implements AutoCloseable {
 
 	}
 	
-	// Declaring ANSI_RESET so that we can reset the color
-    public static final String ANSI_RESET = "\u001B[0m";
-	public static final String ANSI_YELLOW = "\u001B[33m";
-	public static final String ANSI_RED = "\u001B[31m";
-  
-    // Declaring the color
-    // Custom declaration
-	/* 
-    
-	private String formatMessage(String msg)
-	{
-		return(ANSI_YELLOW+msg+ANSI_RESET);
-	}
-	*/
-
-	 
-	private String formatMessage(String msg)
-	{
-		String parts[] = msg.split("\\*");
-		String newmsg [] = new String [parts.length];
-		
-		for(int i=0;i<newmsg.length;i++)
-		{
-			if(parts[i].startsWith(" ")||parts[i].endsWith(" "))
-			{
-				newmsg[i] = parts[i];
-			}
-			else
-			{
-				char symbol = parts[i].charAt(0);
-				switch(symbol)
-				{
-					case('Y'):
-						String y = ANSI_YELLOW +parts[i].substring(0,parts[i].length()-1)+ANSI_RESET;
-						newmsg[i]=(y);
-						break;
-					case('R'):
-					String r = ANSI_RED +parts[i].substring(0,parts[i].length()-1)+ANSI_RESET;
-					newmsg[i]=(r);
-						break;
-					case('B'):
-						String bold = ("\033[0;1m" + parts[i]);
-						break;
-					
-					case('I'):
-						String italics = ("\033[0m"+ parts[i]);
-						break;
-
-				}
-				
-			}
-		}
-
-		
-		return msg;
-	}
+	
 	
 	
 	public void close() {
