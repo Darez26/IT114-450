@@ -8,6 +8,8 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import javax.lang.model.util.ElementScanner14;
+
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
@@ -33,7 +35,7 @@ public class Room implements AutoCloseable {
 	
 
 	// blocked list
-	private List<BlockedClients> clientss = new ArrayList<BlockedClients>();
+	private List<String> clientss = new ArrayList<String>();
 
 	public Room(String name) {
 		this.name = name;
@@ -132,12 +134,12 @@ public class Room implements AutoCloseable {
 						int n = Integer.valueOf(comm2[1]);
 
 						// sendMessage(client,formatMessage(roll(client,n)));
-						roll(client, n);
+						sendMessage(client, formatMessage(roll(client, n)));;
 						break;
 					case MUTE:
 						 // person we extracted
 						 String mutedDude = "";
-						 sendPrivateMessage(client, new ArrayList<String>(), "You have been muted");
+						 sendPrivateMessage(client,new ArrayList<String>(), "You have been muted");
 						break;
 					case UNMUTE:
 						break;
@@ -147,10 +149,30 @@ public class Room implements AutoCloseable {
 
 
 					default:
+					
 						wasCommand = false;
 						break;
 				}
+
 			}
+			else
+				{
+					String alteredMsg = message;
+
+					if (alteredMsg.indexOf("@") > -1) {
+						String[] ats = alteredMsg.split("@");
+						List<String> usersToWhisper = new ArrayList<String>();
+						for (int i = 0; i < ats.length; i++) {
+							if (i % 2 != 0) {
+								String[] data = ats[i].split(" ");
+								String user = data[0];
+								usersToWhisper.add(user);
+							}
+						}
+						sendPrivateMessage(client, usersToWhisper, message);
+					}
+					
+				}
 
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -396,37 +418,41 @@ public class Room implements AutoCloseable {
 
 	}
 
-	protected synchronized void roll(ServerThread sender, int number) {
+	protected synchronized String roll(ServerThread sender, int number) {
 		Random random = new Random();
 		int num = random.nextInt(number);
 		String message = "-r Your Number is " + num + " r-";
 		String newr = formatMessage(message);
 
-		sendMessage(sender, newr);
+		//sendMessage(sender, newr);
 
 		Payload p = new Payload();
 		p.setPayloadType(PayloadType.MESSAGE);
 		p.setMessage(message);
 
-		// return message;
+		 return message;
 	}
 
 	protected void sendPrivateMessage(ServerThread sender, List<String> dest, String message) {
 		Iterator<ServerThread> iter = clients.iterator();
 		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
-		while (iter.hasNext()) {
-			ServerThread client = iter.next();
-			if (dest.contains(client.getClientName().toLowerCase())) {
 
-				boolean messageSent = client.sendMessage(from, message);
-				if (!messageSent) {
-					iter.remove();
-				}
-				break;
+			while (iter.hasNext()) {
+				ServerThread client = iter.next();
+
+				//boolean messageSent = client.sendMessage(from, message);
+				
+				if (dest.contains(client.getClientName().toLowerCase())) {
+					boolean messageSent = client.sendMessage(from, message);
+					if (!messageSent) {
+						iter.remove();
+					}
+					break;
+					}
+
+
 			}
-
 		}
-	}
 
 	public void close() {
 		Server.INSTANCE.removeRoom(this);
