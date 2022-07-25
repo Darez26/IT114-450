@@ -1,6 +1,7 @@
 package Project.client.views;
 
 import java.awt.BorderLayout;
+import java.awt.Color;
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ComponentAdapter;
@@ -17,11 +18,14 @@ import javax.swing.BorderFactory;
 import javax.swing.BoxLayout;
 import javax.swing.JButton;
 import javax.swing.JEditorPane;
+import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JScrollBar;
 import javax.swing.JScrollPane;
 import javax.swing.JTextField;
+import javax.swing.JTextPane;
 import javax.swing.ScrollPaneConstants;
+
 
 import Project.client.Card;
 import Project.client.Client;
@@ -32,7 +36,10 @@ public class ChatPanel extends JPanel {
     private static Logger logger = Logger.getLogger(ChatPanel.class.getName());
     private JPanel chatArea = null;
     private UserListPanel userListPanel;
-    public ChatPanel(ICardControls controls){
+
+    final JLabel label1 = new JLabel();
+
+    public ChatPanel(ICardControls controls) {
         super(new BorderLayout(10, 10));
         JPanel wrapper = new JPanel();
         wrapper.setLayout(new BoxLayout(wrapper, BoxLayout.Y_AXIS));
@@ -55,6 +62,9 @@ public class ChatPanel extends JPanel {
         input.add(textValue);
         JButton button = new JButton("Send");
         // lets us submit with the enter key instead of just the button click
+        // JTextPane ntext = new JTextPane();
+        // ntext.setContentType("text/html");
+
         textValue.addKeyListener(new KeyListener() {
 
             @Override
@@ -78,7 +88,10 @@ public class ChatPanel extends JPanel {
         button.addActionListener((event) -> {
             try {
                 String text = textValue.getText().trim();
+
                 if (text.length() > 0) {
+                     
+                    
                     Client.INSTANCE.sendMessage(text);
                     textValue.setText("");// clear the original text
 
@@ -127,8 +140,8 @@ public class ChatPanel extends JPanel {
                 // set the dimensions based on the frame size
                 Dimension frameSize = wrapper.getParent().getParent().getSize();
                 int w = (int) Math.ceil(frameSize.getWidth() * .3f);
-                
-                userListPanel.setPreferredSize(new Dimension(w, (int)frameSize.getHeight()));
+
+                userListPanel.setPreferredSize(new Dimension(w, (int) frameSize.getHeight()));
                 userListPanel.revalidate();
                 userListPanel.repaint();
             }
@@ -139,25 +152,31 @@ public class ChatPanel extends JPanel {
             }
         });
     }
-    public void addUserListItem(long clientId, String clientName){
+
+    public void addUserListItem(long clientId, String clientName) {
         userListPanel.addUserListItem(clientId, clientName);
     }
-    public void removeUserListItem(long clientId){
+
+    public void removeUserListItem(long clientId) {
         userListPanel.removeUserListItem(clientId);
     }
-    public void clearUserList(){
+
+    public void clearUserList() {
         userListPanel.clearUserList();
     }
+
     public void addText(String text) {
         JPanel content = chatArea;
         // add message
-        JEditorPane textContainer = new JEditorPane("text/plain", text);
+        JEditorPane textContainer = new JEditorPane("text/html", text);
+        
+        
 
         // sizes the panel to attempt to take up the width of the container
         // and expand in height based on word wrapping
         textContainer.setLayout(null);
         textContainer.setPreferredSize(
-                new Dimension(content.getWidth(), ClientUtils.calcHeightForText(this,text, content.getWidth())));
+                new Dimension(content.getWidth(), ClientUtils.calcHeightForText(this, text, content.getWidth())));
         textContainer.setMaximumSize(textContainer.getPreferredSize());
         textContainer.setEditable(false);
         ClientUtils.clearBackground(textContainer);
@@ -166,5 +185,7 @@ public class ChatPanel extends JPanel {
         // scroll down on new message
         JScrollBar vertical = ((JScrollPane) chatArea.getParent().getParent()).getVerticalScrollBar();
         vertical.setValue(vertical.getMaximum());
+
     }
+
 }

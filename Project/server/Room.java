@@ -8,7 +8,6 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 import Project.common.Constants;
 import Project.common.Payload;
 import Project.common.PayloadType;
@@ -16,6 +15,7 @@ import Project.common.PayloadType;
 public class Room implements AutoCloseable {
 	private String name;
 	private List<ServerThread> clients = Collections.synchronizedList(new ArrayList<ServerThread>());
+
 	private boolean isRunning = false;
 	// Commands
 	private final static String COMMAND_TRIGGER = "/";
@@ -26,12 +26,14 @@ public class Room implements AutoCloseable {
 	private final static String LOGOFF = "logoff";
 	private final static String FLIP = "flip";
 	private final static String ROLL = "roll";
+	private final static String MUTE = "mute";
+	private final static String UNMUTE = "unmute";
 	private static Logger logger = Logger.getLogger(Room.class.getName());
 
-	// Declaring ANSI_RESET so that we can reset the color
-    public static final String ANSI_RESET = "\u001B[0m";
-	public static final String ANSI_YELLOW = "\u001B[33m";
-	public static final String ANSI_RED = "\u001B[31m";
+	
+
+	// blocked list
+	private List<BlockedClients> clientss = new ArrayList<BlockedClients>();
 
 	public Room(String name) {
 		this.name = name;
@@ -68,7 +70,7 @@ public class Room implements AutoCloseable {
 	protected synchronized void removeClient(ServerThread client) {
 		if (!isRunning) {
 			return;
-		}
+		} 
 		clients.remove(client);
 		// we don't need to broadcast it to the server
 		// only to our own Room
@@ -97,10 +99,10 @@ public class Room implements AutoCloseable {
 	 * @param client  The sender of the message (since they'll be the ones
 	 *                triggering the actions)
 	 */
-	private String processCommands(String message, ServerThread client) {
+	private boolean processCommands(String message, ServerThread client) {
 		boolean wasCommand = false;
-		String response =null;
-		
+		//String response = null;
+
 		try {
 			if (message.startsWith(COMMAND_TRIGGER)) {
 				String[] comm = message.split(COMMAND_TRIGGER);
@@ -124,147 +126,138 @@ public class Room implements AutoCloseable {
 						Room.disconnectClient(client, this);
 						break;
 					case FLIP:
-						flip(client);
+						sendMessage(client, formatMessage(flip(client)));
 						break;
 					case ROLL:
 						int n = Integer.valueOf(comm2[1]);
+
+						// sendMessage(client,formatMessage(roll(client,n)));
+						roll(client, n);
+						break;
+					case MUTE:
+						 // person we extracted
+						 String mutedDude = "";
+						 sendPrivateMessage(client, new ArrayList<String>(), "You have been muted");
+						break;
+					case UNMUTE:
+						break;
+					case "PM":
 						
-						roll(client,n);
 						 break;
-						
+
+
 					default:
 						wasCommand = false;
 						break;
 				}
 			}
 
-			else{
-				String msg = formatMessage(message);
-				response = msg;
-
-			}
-			
-				
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		//return wasCommand;
-		return response;
+		return wasCommand;
+		//return response;
 
 	}
 
 	// Command helper methods
 
-	protected synchronized String formatMessage(String message)
-	{
+	protected  String formatMessage(String message) {
 		String newMSG = message;
-		
-                if (newMSG.indexOf("@@") > -1) {
-                    String[] s1 = newMSG.split("@@");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<b>" + s1[i] + "</b>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
-                }
-				if(newMSG.indexOf("**") > -1)
-				{
-					String[] s1 = newMSG.split("\\*\\*");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<u>" + s1[i] + "</u>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+
+		if (newMSG.indexOf("##") > -1) {
+			String[] s1 = newMSG.split("##");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith(" ") || s1[i].endsWith(" ")) {
+					m += s1[i];
+				} else {
+					m += "<b>" + s1[i] + "</b>";
+				}
+				System.out.println(s1[i]);
+			}
+
+			newMSG = m;
+		}
+		if (newMSG.indexOf("**") > -1) {
+			String[] s1 = newMSG.split("\\*\\*");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith(" ") || s1[i].endsWith(" ")) {
+					m += s1[i];
+				} else {
+					m += "<u>" + s1[i] + "</u>";
+				}
+				System.out.println(s1[i]);
+			}
+
+			newMSG = m;
+
+		}
+		if (newMSG.indexOf("$$") > -1) {
+			String[] s1 = newMSG.split("\\$\\$");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith(" ") || s1[i].endsWith(" ")) {
+					m += s1[i];
+				} else {
+					m += "<i>" + s1[i] + "</i>";
+				}
+				System.out.println(s1[i]);
+			}
+
+			newMSG = m;
+
+		}
+
+		// color for red
+
+		if (newMSG.indexOf("-r") > -1) {
+			String[] s1 = newMSG.split("\\-");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith("r") || s1[i].endsWith("r")) {
+					m += "<font color=\"red\">" + s1[i].substring(2, s1[i].length() - 2) +"</font>";
+				} else {
+					m += s1[i];
 
 				}
-				if(newMSG.indexOf("$$") > -1)
-				{
-					String[] s1 = newMSG.split("\\$\\$");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<i>" + s1[i] + "</i>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+				System.out.println(s1[i]);
+			}
+
+			newMSG = m;
+
+		}
+		if (newMSG.indexOf("-y") > -1) {
+			String[] s1 = newMSG.split("\\-");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith("y") || s1[i].endsWith("y")) {
+					m += "<font color=\"yellow\">" + s1[i].substring(2, s1[i].length() - 2) +"</font>";
+				} else {
+					m += s1[i];
 
 				}
-				
-				// color for red 
+				System.out.println(s1[i]);
+			}
 
-				if(newMSG.indexOf("-r") > -1)
-				{
-					String[] s1 = newMSG.split("\\-");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith("r")|| s1[i].endsWith("r")) 
-						{
-                            m += ANSI_RED + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
-                        }
-                        else {
-							m += s1[i];
-                            
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+			newMSG = m;
 
-				}
-				if(newMSG.indexOf("-y") > -1)
-				{
-					String[] s1 = newMSG.split("\\-");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith("y")|| s1[i].endsWith("y")) 
-						{
-                            m += ANSI_YELLOW + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
-                        }
-                        else {
-							m += s1[i];
-                            
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+		}
 
-				}
-
-        
 		return newMSG;
-    }
-
-		
+	}
 
 	protected static void getRooms(String query, ServerThread client) {
 		String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
-		client.sendRoomsList(rooms,(rooms!=null&&rooms.length==0)?"No rooms found containing your query string":null);
+		client.sendRoomsList(rooms,
+				(rooms != null && rooms.length == 0) ? "No rooms found containing your query string" : null);
 	}
 
 	protected static void createRoom(String roomName, ServerThread client) {
@@ -275,7 +268,6 @@ public class Room implements AutoCloseable {
 			client.sendRoomsList(null, String.format("Room %s already exists", roomName));
 		}
 	}
-	
 
 	protected static void joinRoom(String roomName, ServerThread client) {
 		if (!Server.INSTANCE.joinRoom(roomName, client)) {
@@ -304,15 +296,14 @@ public class Room implements AutoCloseable {
 			return;
 		}
 		info("Sending message to " + clients.size() + " clients");
-		
-		
-		String resp = processCommands(message, sender);
 
-		if (resp==null) {
+		
+
+		if (sender != null && processCommands(message, sender)) {
 			// it was a command, don't broadcast
 			return;
 		}
-		message = resp;
+		message = formatMessage(message);
 		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
 		synchronized (clients) {
 			Iterator<ServerThread> iter = clients.iterator();
@@ -385,49 +376,61 @@ public class Room implements AutoCloseable {
 		// sendMessage(null, client.getClientName() + " disconnected");
 	}
 
-	protected synchronized void flip(ServerThread sender)
-	{
+	protected synchronized String flip(ServerThread sender) {
 		Random random = new Random();
 		int coin = random.nextInt(4);
 		String message;
-		if(coin%2==0)
-		{
-			message = "The Coin is Heads";
-			sendMessage( sender,message);
+		if (coin % 2 == 0) {
+			message = "-r The Coin is Heads r-";
+
+		} else {
+			message = "-r The Coin is tails r-";
+
 		}
-		else 
-		{
-			message = "The Coin is tails";
-			sendMessage(sender,message);
-		}
+
 		Payload p = new Payload();
-        p.setPayloadType(PayloadType.MESSAGE);
-        p.setMessage(message);
+		p.setPayloadType(PayloadType.MESSAGE);
+		p.setMessage(message);
+
+		return message;
 
 	}
-	protected synchronized void roll(ServerThread sender, int number)
-	{
+
+	protected synchronized void roll(ServerThread sender, int number) {
 		Random random = new Random();
 		int num = random.nextInt(number);
-		String message = "Your Number is "+ num;
-		
-		sendMessage(sender, message);
+		String message = "-r Your Number is " + num + " r-";
+		String newr = formatMessage(message);
+
+		sendMessage(sender, newr);
 
 		Payload p = new Payload();
-        p.setPayloadType(PayloadType.MESSAGE);
-        p.setMessage(message);
-        
-		
+		p.setPayloadType(PayloadType.MESSAGE);
+		p.setMessage(message);
 
+		// return message;
 	}
-	
-	
-	
-	
+
+	protected void sendPrivateMessage(ServerThread sender, List<String> dest, String message) {
+		Iterator<ServerThread> iter = clients.iterator();
+		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+		while (iter.hasNext()) {
+			ServerThread client = iter.next();
+			if (dest.contains(client.getClientName().toLowerCase())) {
+
+				boolean messageSent = client.sendMessage(from, message);
+				if (!messageSent) {
+					iter.remove();
+				}
+				break;
+			}
+
+		}
+	}
+
 	public void close() {
 		Server.INSTANCE.removeRoom(this);
 		isRunning = false;
 		clients = null;
 	}
 }
-
