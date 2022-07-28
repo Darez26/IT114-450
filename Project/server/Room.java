@@ -8,9 +8,7 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 import Project.common.Constants;
-
 
 public class Room implements AutoCloseable {
 	private String name;
@@ -25,9 +23,9 @@ public class Room implements AutoCloseable {
 	private final static String LOGOFF = "logoff";
 	private final static String FLIP = "flip";
 	private final static String ROLL = "roll";
+	private final static String MUTE = "mute";
+	private final static String UNMUTE = "unmute";
 	private static Logger logger = Logger.getLogger(Room.class.getName());
-
-	
 
 	public Room(String name) {
 		this.name = name;
@@ -95,7 +93,7 @@ public class Room implements AutoCloseable {
 	 */
 	private boolean processCommands(String message, ServerThread client) {
 		boolean wasCommand = false;
-		
+
 		try {
 			if (message.startsWith(COMMAND_TRIGGER)) {
 				String[] comm = message.split(COMMAND_TRIGGER);
@@ -123,60 +121,50 @@ public class Room implements AutoCloseable {
 						break;
 					case ROLL:
 						int n = Integer.valueOf(comm2[1]);
-						roll(client,n);
-						 break;
+						roll(client, n);
+						break;
+					case MUTE:
 						
+					case UNMUTE:
+						break;
+
 					default:
 						wasCommand = false;
 						break;
 				}
 			}
 
-			else{
-				String msg = formatMessage(message);
-				//response = msg;
-
-			}
-			
-				
 		} catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		//return wasCommand;
+		// return wasCommand;
 		return wasCommand;
 
 	}
 
 	// Command helper methods
-	protected String change(boolean change, String msg, String delimiter,String tag, String end)
-	{
-		String [] splitmsg = msg.split(delimiter);
+	protected String change(boolean change, String msg, String delimiter, String tag, String end) {
+		String[] splitmsg = msg.split(delimiter);
 		String temp = "";
 
-		for(int i=0;i<splitmsg.length;i++)
-		{
-			if(i%2==0)
-			{
-				temp +=splitmsg[i];
-			}
-			else 
-			{
-				temp+= tag + splitmsg[i]+ end;
+		for (int i = 0; i < splitmsg.length; i++) {
+			if (i % 2 == 0) {
+				temp += splitmsg[i];
+			} else {
+				temp += tag + splitmsg[i] + end;
 			}
 		}
-		
 
 		return temp;
 	}
 
-	protected synchronized String formatMessage(String message)
-	{
+	protected synchronized String formatMessage(String message) {
 		String newMSG = message;
-		
-		newMSG = change(newMSG.indexOf("##")>-1,newMSG,"##","<b>","</b>");
-		newMSG = change(newMSG.indexOf("**")>-1,newMSG,"\\*\\*","<u>","</u>");
-		newMSG = change(newMSG.indexOf("$$")>-1,newMSG,"\\$\\$","<i>","</i>");
+
+		newMSG = change(newMSG.indexOf("##") > -1, newMSG, "##", "<b>", "</b>");
+		newMSG = change(newMSG.indexOf("**") > -1, newMSG, "\\*\\*", "<u>", "</u>");
+		newMSG = change(newMSG.indexOf("$$") > -1, newMSG, "\\$\\$", "<i>", "</i>");
 		if (newMSG.indexOf("-r") > -1) {
 			String[] s1 = newMSG.split("\\-");
 			String m = "";
@@ -212,15 +200,13 @@ public class Room implements AutoCloseable {
 
 		}
 
-        
 		return newMSG;
-    }
-
-		
+	}
 
 	protected static void getRooms(String query, ServerThread client) {
 		String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
-		client.sendRoomsList(rooms,(rooms!=null&&rooms.length==0)?"No rooms found containing your query string":null);
+		client.sendRoomsList(rooms,
+				(rooms != null && rooms.length == 0) ? "No rooms found containing your query string" : null);
 	}
 
 	protected static void createRoom(String roomName, ServerThread client) {
@@ -231,7 +217,6 @@ public class Room implements AutoCloseable {
 			client.sendRoomsList(null, String.format("Room %s already exists", roomName));
 		}
 	}
-	
 
 	protected static void joinRoom(String roomName, ServerThread client) {
 		if (!Server.INSTANCE.joinRoom(roomName, client)) {
@@ -260,9 +245,7 @@ public class Room implements AutoCloseable {
 			return;
 		}
 		info("Sending message to " + clients.size() + " clients");
-		
-		
-		
+
 		if (sender != null && processCommands(message, sender)) {
 			// it was a command, don't broadcast
 			return;
@@ -340,34 +323,47 @@ public class Room implements AutoCloseable {
 		// sendMessage(null, client.getClientName() + " disconnected");
 	}
 
-	protected synchronized void flip(ServerThread sender)
-	{
+	protected synchronized void flip(ServerThread sender) {
 		Random random = new Random();
 		int coin = random.nextInt(4);
 		String message;
-		if(coin%2==0)
-		{message = "The Coin is Heads";}	
-		else 
-		{message = "The Coin is tails";}
+		if (coin % 2 == 0) {
+			message = "-r The Coin is Heads r- ";
+		} else {
+			message = "-r The Coin is tails r-";
+		}
 
-		sendMessage( sender,message);
-	}
-	protected synchronized void roll(ServerThread sender, int number)
-	{
-		Random random = new Random();
-		int num = random.nextInt(number);
-		String message = "-r The dice rolls "+ num+ " -r";
-		
 		sendMessage(sender, message);
 	}
-	
-	
-	
-	
+
+	protected synchronized void roll(ServerThread sender, int number) {
+		Random random = new Random();
+		int num = random.nextInt(number);
+		String message = "-r The dice rolls " + num + " -r";
+
+		sendMessage(sender, message);
+	}
+
+	protected void sendPrivateMessage(ServerThread sender, List<String> dest, String message) {
+		Iterator<ServerThread> iter = clients.iterator();
+		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+
+		while (iter.hasNext()) {
+			ServerThread client = iter.next();
+			if (dest.contains(client.getClientName().toLowerCase())) {
+				boolean messageSent = client.sendMessage(from, message);
+				if (!messageSent) {
+					iter.remove();
+				}
+				break;
+			}
+
+		}
+	}
+
 	public void close() {
 		Server.INSTANCE.removeRoom(this);
 		isRunning = false;
 		clients = null;
 	}
 }
-
