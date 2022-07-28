@@ -1,7 +1,7 @@
 package Project.client.views;
 
 import java.awt.BorderLayout;
-import java.awt.Color;
+
 import java.awt.Component;
 import java.awt.Dimension;
 import java.awt.event.ComponentAdapter;
@@ -62,8 +62,7 @@ public class ChatPanel extends JPanel {
         input.add(textValue);
         JButton button = new JButton("Send");
         // lets us submit with the enter key instead of just the button click
-        // JTextPane ntext = new JTextPane();
-        // ntext.setContentType("text/html");
+        
 
         textValue.addKeyListener(new KeyListener() {
 
