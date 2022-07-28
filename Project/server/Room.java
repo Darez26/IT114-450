@@ -1,5 +1,6 @@
 package Project.server;
 
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Iterator;
@@ -10,9 +11,11 @@ import java.util.logging.Logger;
 
 import Project.common.Constants;
 
+
 public class Room implements AutoCloseable {
 	private String name;
 	private List<ServerThread> clients = Collections.synchronizedList(new ArrayList<ServerThread>());
+
 	private boolean isRunning = false;
 	// Commands
 	private final static String COMMAND_TRIGGER = "/";
@@ -93,9 +96,11 @@ public class Room implements AutoCloseable {
 	 */
 	private boolean processCommands(String message, ServerThread client) {
 		boolean wasCommand = false;
+		List<String> mutedClients = new ArrayList<String>();
 
 		try {
-			if (message.startsWith(COMMAND_TRIGGER)) {
+			
+			if (message.startsWith(COMMAND_TRIGGER)){
 				String[] comm = message.split(COMMAND_TRIGGER);
 				String part1 = comm[1];
 				String[] comm2 = part1.split(" ");
@@ -124,47 +129,118 @@ public class Room implements AutoCloseable {
 						roll(client, n);
 						break;
 					case MUTE:
-						
-					case UNMUTE:
-						break;
+						// person we extracted
+						String s = message;
 
+						if (s.indexOf("@") > -1) {
+							String[] ats = s.split("@");
+							// List<String> usersToWhisper = new ArrayList<String>();
+							for (int i = 0; i < ats.length; i++) {
+								if (i % 2 != 0) {
+									String[] data = ats[i].split(" ");
+									String user = data[0];
+									mutedClients.add(user);
+									
+
+								}
+							}
+							sendPrivateMessage(client, mutedClients, client.getClientName() + " muted you");
+
+						}
+						// String mutedDude = "";
+						// mutedClients.add(mutedDude);
+						// sendPrivateMessage(client, mutedClients, "You have been muted");
+						break;
+					case UNMUTE:
+						// person we extracted
+						String ss = message;
+						
+						if (ss.indexOf("@") > -1) {
+							String[] ats = ss.split("@");
+							List<String> unblock = new ArrayList<String>();
+							for (int i = 0; i < ats.length; i++) {
+								if (i % 2 != 0) {
+									String[] data = ats[i].split(" ");
+									String user = data[0];
+									mutedClients.remove(user);
+									unblock.add(user);
+
+								}
+							}
+
+							sendPrivateMessage(client, unblock, client.getClientName() + " unmuted you");
+							
+
+						}
+
+						break;
+					
 					default:
 						wasCommand = false;
 						break;
 				}
-			}
+				
+			} 
+			else {
+				
+				// TODO extract clients from message, save to array with
+				String m = message;
+				if(m.indexOf("@")>-1)
+				{
+					String arr[] = m.split("@");
+					String clientName = arr[1];
+					clientName = clientName.trim().toLowerCase();
+					List<String> clientss = new ArrayList<String>();
+					clientss.add(clientName);
+					sendPrivateMessage(client, clientss, message);
+				}
+				
+				return wasCommand;
 
-		} catch (Exception e) {
+			}
+		} 
+
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		// return wasCommand;
 		return wasCommand;
+		// return response;
 
 	}
 
 	// Command helper methods
-	protected String change(boolean change, String msg, String delimiter, String tag, String end) {
-		String[] splitmsg = msg.split(delimiter);
+	protected String change(boolean change, String msg, String delimiter,String tag, String end)
+	{
+		String [] splitmsg = msg.split(delimiter);
 		String temp = "";
 
-		for (int i = 0; i < splitmsg.length; i++) {
-			if (i % 2 == 0) {
-				temp += splitmsg[i];
-			} else {
-				temp += tag + splitmsg[i] + end;
+		for(int i=0;i<splitmsg.length;i++)
+		{
+			if(i%2==0)
+			{
+				temp +=splitmsg[i];
+			}
+			else 
+			{
+				temp+= tag + splitmsg[i]+ end;
 			}
 		}
+		
 
 		return temp;
 	}
 
-	protected synchronized String formatMessage(String message) {
+	protected String formatMessage(String message) {
 		String newMSG = message;
 
-		newMSG = change(newMSG.indexOf("##") > -1, newMSG, "##", "<b>", "</b>");
-		newMSG = change(newMSG.indexOf("**") > -1, newMSG, "\\*\\*", "<u>", "</u>");
-		newMSG = change(newMSG.indexOf("$$") > -1, newMSG, "\\$\\$", "<i>", "</i>");
+		newMSG = change(newMSG.indexOf("##")>-1,newMSG,"##","<b>","</b>");
+		newMSG = change(newMSG.indexOf("**")>-1,newMSG,"\\*\\*","<u>","</u>");
+		newMSG = change(newMSG.indexOf("$$")>-1,newMSG,"\\$\\$","<i>","</i>");
+		//newMSG = change(newMSG.indexOf("-r")>-1,newMSG,"","<i>","</i>");
+
+		// color for red
+
 		if (newMSG.indexOf("-r") > -1) {
 			String[] s1 = newMSG.split("\\-");
 			String m = "";
@@ -328,20 +404,28 @@ public class Room implements AutoCloseable {
 		int coin = random.nextInt(4);
 		String message;
 		if (coin % 2 == 0) {
-			message = "-r The Coin is Heads r- ";
+			message = "-r The Coin is Heads r-";
+
 		} else {
 			message = "-r The Coin is tails r-";
+
 		}
 
+		
 		sendMessage(sender, message);
+
+		// return message;
+
 	}
 
 	protected synchronized void roll(ServerThread sender, int number) {
 		Random random = new Random();
 		int num = random.nextInt(number);
-		String message = "-r The dice rolls " + num + " -r";
+		String message = "-r Your Number is " + num + " r-";
+		String newr = formatMessage(message);
 
-		sendMessage(sender, message);
+		sendMessage(sender, newr);
+
 	}
 
 	protected void sendPrivateMessage(ServerThread sender, List<String> dest, String message) {

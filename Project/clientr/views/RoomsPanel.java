@@ -1,4 +1,4 @@
-package Project.client.views;
+package Project.clientr.views;
 
 import java.awt.BorderLayout;
 import java.awt.Component;
@@ -20,9 +20,9 @@ import javax.swing.JScrollPane;
 import javax.swing.JTextField;
 import javax.swing.ScrollPaneConstants;
 
-import Project.client.Card;
-import Project.client.Client;
-import Project.client.ICardControls;
+import Project.clientr.Card;
+import Project.clientr.Client;
+import Project.clientr.ICardControls;
 
 public class RoomsPanel extends JPanel {
     JPanel container;
