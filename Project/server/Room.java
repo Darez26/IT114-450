@@ -8,14 +8,12 @@ import java.util.Random;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
-
 import Project.common.Constants;
-import Project.common.Payload;
-import Project.common.PayloadType;
 
 public class Room implements AutoCloseable {
 	private String name;
 	private List<ServerThread> clients = Collections.synchronizedList(new ArrayList<ServerThread>());
+
 	private boolean isRunning = false;
 	// Commands
 	private final static String COMMAND_TRIGGER = "/";
@@ -26,12 +24,9 @@ public class Room implements AutoCloseable {
 	private final static String LOGOFF = "logoff";
 	private final static String FLIP = "flip";
 	private final static String ROLL = "roll";
+	private final static String MUTE = "mute";
+	private final static String UNMUTE = "unmute";
 	private static Logger logger = Logger.getLogger(Room.class.getName());
-
-	// Declaring ANSI_RESET so that we can reset the color
-    public static final String ANSI_RESET = "\u001B[0m";
-	public static final String ANSI_YELLOW = "\u001B[33m";
-	public static final String ANSI_RED = "\u001B[31m";
 
 	public Room(String name) {
 		this.name = name;
@@ -97,11 +92,12 @@ public class Room implements AutoCloseable {
 	 * @param client  The sender of the message (since they'll be the ones
 	 *                triggering the actions)
 	 */
-	private String processCommands(String message, ServerThread client) {
+	private boolean processCommands(String message, ServerThread client) {
 		boolean wasCommand = false;
-		String response =null;
-		
+		List<String> mutedClients = new ArrayList<String>();
+		List<String> dm = new ArrayList<String>();
 		try {
+
 			if (message.startsWith(COMMAND_TRIGGER)) {
 				String[] comm = message.split(COMMAND_TRIGGER);
 				String part1 = comm[1];
@@ -128,143 +124,162 @@ public class Room implements AutoCloseable {
 						break;
 					case ROLL:
 						int n = Integer.valueOf(comm2[1]);
+						roll(client, n);
+						break;
+
+						//UCID 31485020 
+						// Jul 28, 2022
+						// attempt to create an mute function where users are put on a StringLIST and not 
+						// allowed to send a msg to client
+					case MUTE:
+						String s = message;
+						if (s.indexOf("@") > -1) {
+							String[] ats = s.split("@");
+							for (int i = 0; i < ats.length; i++) {
+								if (i % 2 != 0) {
+									String[] data = ats[i].split(" ");
+									String user = data[0].toLowerCase();
+									mutedClients.add(user);
+								}
+							}
+							sendPrivateMessage(client, mutedClients, client.getClientName() + " muted you");
+						}
+						break;
+						//UCID 31485020 
+						// Jul 28, 2022
+						// attempt to create an unmute function where users are taken off of a string list
+					case UNMUTE:
+						String ss = message;
+						if (ss.indexOf("@") > -1) {
+							String[] ats = ss.split("@");
+							List<String> unblock = new ArrayList<String>();
+							for (int i = 0; i < ats.length; i++) {
+								if (i % 2 != 0) {
+									String[] data = ats[i].split(" ");
+									String user = data[0].toLowerCase();
+									mutedClients.remove(user);
+									unblock.add(user);
+								}
+							}
+							sendPrivateMessage(client, unblock, client.getClientName() + " unmuted you");
+						}
+					case "PM":
+						String y = message;
 						
-						roll(client,n);
-						 break;
+						if(y.indexOf("@")>-1)
+						{
+							List<String> g = new ArrayList<String>();
+							String[] t = y.split("@");
+							
+							for(int i=0;i<t.length;i++){
+								if(i%2!=0)
+								{
+									String[]d=t[i].split(" ");
+									String u = d[0];
+									g.add(u);
+								}
+							}
+							sendPrivateMessage(client, g, message);
+						}
 						
+
+						break;
+
 					default:
+
 						wasCommand = false;
 						break;
 				}
-			}
-
-			else{
-				String msg = formatMessage(message);
-				response = msg;
 
 			}
-			
-				
-		} catch (Exception e) {
+			if (!message.startsWith(COMMAND_TRIGGER)) {
+				String m = message;
+				List<String> clientss = new ArrayList<String>();
+
+				if (m.indexOf("@") > -1) {
+					String arr[] = m.split("@");
+					String clientName = "";
+					for (int i = 0; i < arr.length; i++) {
+						if (i > 0) {
+							clientName = clientName.trim().toLowerCase();
+							clientss.add(clientName);
+						}
+					}
+					sendPrivateMessage(client, clientss, message);
+					
+					
+				}
+
+				return false;
+			}
+		}
+
+		catch (Exception e) {
 			e.printStackTrace();
 		}
 
-		//return wasCommand;
-		return response;
+		return wasCommand;
+		// return response;
 
 	}
 
 	// Command helper methods
+	protected String change(boolean change, String msg, String delimiter, String tag, String end) {
+		String[] splitmsg = msg.split(delimiter);
+		String temp = "";
+		for (int i = 0; i < splitmsg.length; i++) {
+			if (i % 2 == 0) {temp += splitmsg[i];
+			} else {
+				temp += tag + splitmsg[i] + end;
+			}
+		}
 
-	protected synchronized String formatMessage(String message)
-	{
+		return temp;
+	}
+
+	protected String formatMessage(String message) {
 		String newMSG = message;
-		
-                if (newMSG.indexOf("@@") > -1) {
-                    String[] s1 = newMSG.split("@@");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<b>" + s1[i] + "</b>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
-                }
-				if(newMSG.indexOf("**") > -1)
-				{
-					String[] s1 = newMSG.split("\\*\\*");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<u>" + s1[i] + "</u>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+
+		newMSG = change(newMSG.indexOf("##") > -1, newMSG, "##", "<b>", "</b>");
+		newMSG = change(newMSG.indexOf("**") > -1, newMSG, "\\*\\*", "<u>", "</u>");
+		newMSG = change(newMSG.indexOf("$$") > -1, newMSG, "\\$\\$", "<i>", "</i>");
+		// color for red
+		if (newMSG.indexOf("-r") > -1) {
+			String[] s1 = newMSG.split("\\-");
+			String m = "";
+
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith("r") || s1[i].endsWith("r")) {
+					m += "<font color=\"red\">" + s1[i].substring(2, s1[i].length() - 2) + "</font>";
+				} else {
+					m += s1[i];
 
 				}
-				if(newMSG.indexOf("$$") > -1)
-				{
-					String[] s1 = newMSG.split("\\$\\$");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith(" ")|| s1[i].endsWith(" ")) {
-                            m += s1[i];
-                        }
-                        else {
-                            m += "<i>" + s1[i] + "</i>";
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+				System.out.println(s1[i]);
+			}
 
-				}
-				
-				// color for red 
+			newMSG = m;
 
-				if(newMSG.indexOf("-r") > -1)
-				{
-					String[] s1 = newMSG.split("\\-");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith("r")|| s1[i].endsWith("r")) 
-						{
-                            m += ANSI_RED + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
-                        }
-                        else {
-							m += s1[i];
-                            
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
+		}
+		if (newMSG.indexOf("-y") > -1) {
+			String[] s1 = newMSG.split("\\-");
+			String m = "";
 
-				}
-				if(newMSG.indexOf("-y") > -1)
-				{
-					String[] s1 = newMSG.split("\\-");
-                    String m = "";
-                   
-                    for (int i = 0; i < s1.length; i++) {
-                        if (s1[i].startsWith("y")|| s1[i].endsWith("y")) 
-						{
-                            m += ANSI_YELLOW + s1[i].substring(2,s1[i].length()-2) + ANSI_RESET;
-                        }
-                        else {
-							m += s1[i];
-                            
-                        }
-                        System.out.println(s1[i]);
-                    }
-        
-                    newMSG = m;
-
-				}
-
-        
+			for (int i = 0; i < s1.length; i++) {
+				if (s1[i].startsWith("y") || s1[i].endsWith("y")) {
+					m += "<font color=\"yellow\">" + s1[i].substring(2, s1[i].length() - 2) + "</font>";
+				} else {m += s1[i];				}
+				System.out.println(s1[i]);
+			}
+			newMSG = m;
+		}
 		return newMSG;
-    }
-
-		
+	}
 
 	protected static void getRooms(String query, ServerThread client) {
 		String[] rooms = Server.INSTANCE.getRooms(query).toArray(new String[0]);
-		client.sendRoomsList(rooms,(rooms!=null&&rooms.length==0)?"No rooms found containing your query string":null);
+		client.sendRoomsList(rooms,
+				(rooms != null && rooms.length == 0) ? "No rooms found containing your query string" : null);
 	}
 
 	protected static void createRoom(String roomName, ServerThread client) {
@@ -275,7 +290,6 @@ public class Room implements AutoCloseable {
 			client.sendRoomsList(null, String.format("Room %s already exists", roomName));
 		}
 	}
-	
 
 	protected static void joinRoom(String roomName, ServerThread client) {
 		if (!Server.INSTANCE.joinRoom(roomName, client)) {
@@ -304,15 +318,12 @@ public class Room implements AutoCloseable {
 			return;
 		}
 		info("Sending message to " + clients.size() + " clients");
-		
-		
-		String resp = processCommands(message, sender);
 
-		if (resp==null) {
+		if (sender != null && processCommands(message, sender)) {
 			// it was a command, don't broadcast
 			return;
 		}
-		message = resp;
+		message = formatMessage(message);
 		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
 		synchronized (clients) {
 			Iterator<ServerThread> iter = clients.iterator();
@@ -385,49 +396,64 @@ public class Room implements AutoCloseable {
 		// sendMessage(null, client.getClientName() + " disconnected");
 	}
 
-	protected synchronized void flip(ServerThread sender)
-	{
+	//UCID 31485020 
+	// Jul 28, 2022
+	// flip function will check if a random integer is even, if it's even its heads and else its flip
+	protected synchronized void flip(ServerThread sender) {
 		Random random = new Random();
 		int coin = random.nextInt(4);
 		String message;
-		if(coin%2==0)
-		{
-			message = "The Coin is Heads";
-			sendMessage( sender,message);
-		}
-		else 
-		{
-			message = "The Coin is tails";
-			sendMessage(sender,message);
-		}
-		Payload p = new Payload();
-        p.setPayloadType(PayloadType.MESSAGE);
-        p.setMessage(message);
+		if (coin % 2 == 0) {
+			message = "-r The Coin is Heads r-";
 
-	}
-	protected synchronized void roll(ServerThread sender, int number)
-	{
-		Random random = new Random();
-		int num = random.nextInt(number);
-		String message = "Your Number is "+ num;
-		
+		} else {
+			message = "-r The Coin is tails r-";
+
+		}
+
 		sendMessage(sender, message);
 
-		Payload p = new Payload();
-        p.setPayloadType(PayloadType.MESSAGE);
-        p.setMessage(message);
-        
-		
+		// return message;
+
+	}
+	//UCID 31485020 
+	// Jul 28, 2022
+	// roll function will take in the users int paramater and roll a random integer between 0 to that number
+	protected synchronized void roll(ServerThread sender, int number) {
+		Random random = new Random();
+		int num = random.nextInt(number);
+		String message = "-r Your Number is " + num + " r-";
+		String newr = formatMessage(message);
+
+		sendMessage(sender, newr);
 
 	}
 	
-	
-	
-	
+	//UCID 31485020 
+	// Jul 28, 2022
+	// sending private msg which will take a client, and send the message to a stringlist containg
+	// a list of clientnames
+
+	protected void sendPrivateMessage(ServerThread sender, List<String> dest, String message) {
+		Iterator<ServerThread> iter = clients.iterator();
+		long from = (sender == null) ? Constants.DEFAULT_CLIENT_ID : sender.getClientId();
+
+		while (iter.hasNext()) {
+			ServerThread client = iter.next();
+			if (dest.contains(client.getClientName().toLowerCase())) {
+				boolean messageSent = client.sendMessage(from, message);
+				if (!messageSent) {
+					iter.remove();
+				}
+				break;
+			}
+
+		}
+	}
+
 	public void close() {
 		Server.INSTANCE.removeRoom(this);
 		isRunning = false;
 		clients = null;
 	}
 }
-

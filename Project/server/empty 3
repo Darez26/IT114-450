@@ -1,3 +1,13 @@
+
+
+
+
+
+
+
+
+
+
 package Project.server;
 
 import java.io.IOException;
@@ -11,11 +21,16 @@ import Project.common.Payload;
 import Project.common.PayloadType;
 import Project.common.RoomResultPayload;
 
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Iterator;
+import java.util.List;
+
 /**
  * A server-side representation of a single client
  */
 public class ServerThread extends Thread {
-    private Socket client;
+    Socket client;
     private String clientName;
     private boolean isRunning = false;
     private ObjectOutputStream out;// exposed here for send()
@@ -24,6 +39,36 @@ public class ServerThread extends Thread {
     private Room currentRoom;
     private static Logger logger = Logger.getLogger(ServerThread.class.getName());
     private long myId;
+
+    List<String> mutedClients = new ArrayList<String>();
+
+    public boolean isMuted(String clientName) {
+	clientName = clientName.trim().toLowerCase();
+	return mutedClients.contains(clientName);
+    }
+
+    public void mute(String name) {
+	name = name.trim().toLowerCase();
+	if (!isMuted(name)) {
+	    mutedClients.add(name);
+	    save();
+	}
+    }
+
+    public void unmute(String name) {
+	name = name.trim().toLowerCase();
+	if (isMuted(name)) {
+	    mutedClients.remove(name);
+	    save();
+	}
+    }
+
+    void save() {
+	String data = clientName + ":" + String.join(",", mutedClients);
+	System.out.println(data);
+    }
+
+
 
     public void setClientId(long id) {
         myId = id;

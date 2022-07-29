@@ -1,4 +1,4 @@
-package Project.client.views;
+package Project.clientr.views;
 
 import java.awt.BorderLayout;
 import java.awt.Dimension;
@@ -12,8 +12,8 @@ import javax.swing.JLabel;
 import javax.swing.JPanel;
 import javax.swing.JTextField;
 
-import Project.client.Card;
-import Project.client.ICardControls;
+import Project.clientr.Card;
+import Project.clientr.ICardControls;
 
 public class UserInputPanel extends JPanel{
     private static Logger logger = Logger.getLogger(UserInputPanel.class.getName()); 
@@ -47,6 +47,12 @@ public class UserInputPanel extends JPanel{
                     userError.setVisible(true);
                     isValid = false;
                 }
+                if (username.trim().contains(" ")) {
+                    userError.setText("Username must not have spaces");
+                    userError.setVisible(true);
+                    isValid = false;
+                }
+                
             } catch (NullPointerException e) {
                 userError.setText("Username must be provided");
                 userError.setVisible(true);

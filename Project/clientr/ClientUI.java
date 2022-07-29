@@ -1,5 +1,4 @@
-package Project.client;
-
+package Project.clientr;
 
 import java.awt.CardLayout;
 import java.awt.Component;
@@ -19,11 +18,11 @@ import javax.swing.JMenuBar;
 import javax.swing.JOptionPane;
 import javax.swing.JPanel;
 
-import Project.client.views.ChatPanel;
-import Project.client.views.ConnectionPanel;
-import Project.client.views.Menu;
-import Project.client.views.RoomsPanel;
-import Project.client.views.UserInputPanel;
+import Project.clientr.views.ChatPanel;
+import Project.clientr.views.ConnectionPanel;
+import Project.clientr.views.Menu;
+import Project.clientr.views.RoomsPanel;
+import Project.clientr.views.UserInputPanel;
 import Project.common.Constants;
 
 public class ClientUI extends JFrame implements IClientEvents, ICardControls {
